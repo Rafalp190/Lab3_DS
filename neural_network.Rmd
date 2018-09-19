@@ -1,0 +1,65 @@
+---
+title: "miau"
+author: "Alejandro Vasquez"
+date: "19 de septiembre de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(reticulate)
+use_python("C:/Users/Alejandro/AppData/Local/Programs/Python/Python36")
+```
+
+
+## Redes neuronales simples con Python
+
+Se hizo un modelo secuencial de keras (libreria de Python), luego se "aplanan" (funcion "Flatten") los datos para modificar la dimensionalidad de los datos. Despues, se generaron 128 nodos con la funcion "Dense", utilizando el parametro "relu" que deciden las categorias a las que se clasificara cada dato. A este modelo, luego se le generaron 10 nuevos nodos con las categorias decididas anteriormente (hecho con "Dense"" y el parametro "softmax"). Por último, el modelo fue compilado y ajustado a los datos, utilizando, primero 10 "epochs" (no presentados aquí) y luego 5 "epochs".
+
+```{python}
+
+import numpy as np
+import tensorflow as tf
+
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.layers import Dense, Dropout, Activation, Flatten
+from tensorflow.python.keras.utils import to_categorical
+from tensorflow.python.keras.datasets import mnist
+ 
+
+(training_data, training_labels), (testing_data, testing_labels) = mnist.load_data()
+ 
+# 5. Preprocess input data
+training_data = training_data.astype('float32')
+testing_data = testing_data.astype('float32')
+training_data /= 255
+testing_data /= 255
+ 
+# 6. Preprocess class labels
+training_labels = to_categorical(training_labels, 10)
+testing_labels = to_categorical(testing_labels, 10)
+ 
+# 7. Define model architecture
+model = Sequential()
+ 
+model.add(Flatten(input_shape = (28, 28)))
+model.add(Dense(128, activation='relu'))
+model.add(Dense(10, activation='softmax'))
+ 
+# # 8. Compile model
+model.compile(loss='categorical_crossentropy',
+               optimizer='adam',
+               metrics=['accuracy'])
+ 
+# # 9. Fit model on training data
+model.fit(training_data, training_labels, 
+           batch_size=32, epochs=5, verbose=0)
+ 
+# # 10. Evaluate model on test data
+print("VALIDATE MODEL")
+(loss, accuracy) =  model.evaluate(testing_data, testing_labels)
+print('Test loss:', loss)
+print('Test accuracy:', accuracy)
+```
+
+Con 10 "epochs" el modelo se ajusto un 98%. Para determinar si no se encontraba sobre ajustado, se volvio a correr con 5 "epochs". Con este cambio, el ajuste del modelo fue de 97.93%, por lo que se considera que el modelo predice adecuadamente los pixeles.
