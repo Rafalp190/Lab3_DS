@@ -13,7 +13,7 @@ use_python("c:/users/rafal/appdata/local/programs/python/python36")
 
 ## Deep Learning Model
 
-Sea realizó un modelo de aprendizaje de maquina utilizando redes neuronales convolucionadas. Este se realizó en python utilizando tensorflow y keras.
+Sea realizo un modelo de aprendizaje de maquina utilizando redes neuronales convolucionadas. Este se realizo en python utilizando tensorflow y keras.
 ```{python}
 #Author Rafael Leon
 #Example based onhttps://elitedatascience.com/keras-tutorial-deep-learning-in-python
@@ -74,3 +74,4 @@ print('Test loss:', loss)
 print('Test accuracy:', accuracy)
 ```
 
+### Intepretacion de la precision del modelo

@@ -25,7 +25,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(knitr)
-opts_knit$set(root.dir = "~/R")
+#opts_knit$set(root.dir = "~/R")
 library(data.table)
 library(Rtsne)
 library(ggplot2)
@@ -33,7 +33,10 @@ library(dplyr)
 library(e1071)
 library(caret)
 library(reticulate)
-train = as.data.table(read.csv(file = "~/R/data/all/train.csv"))
+train = as.data.table(read.csv(file = "data/train.csv"))
+
+#library(reticulate)
+use_python("c:/users/rafal/appdata/local/programs/python/python36")
 ```
 
 # Analisis exploratorio
@@ -62,8 +65,122 @@ Efectivamente se puede notar que los datos se agrupan muy bien y en diez grupos 
 
 
 # Modelo de Redes Neuronales Simple
+Se hizo un modelo secuencial de keras (libreria de Python), luego se "aplanan" (funcion "Flatten") los datos para modificar la dimensionalidad de los datos. Despues, se generaron 128 nodos con la funcion "Dense", utilizando el parametro "relu" que deciden las categorias a las que se clasificara cada dato. A este modelo, luego se le generaron 10 nuevos nodos con las categorias decididas anteriormente (hecho con "Dense"" y el parametro "softmax"). Por ?ltimo, el modelo fue compilado y ajustado a los datos, utilizando, primero 10 "epochs" (no presentados aqu?) y luego 5 "epochs".
+
+```{python}
+
+import numpy as np
+import tensorflow as tf
+
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.layers import Dense, Dropout, Activation, Flatten
+from tensorflow.python.keras.utils import to_categorical
+from tensorflow.python.keras.datasets import mnist
+ 
+
+(training_data, training_labels), (testing_data, testing_labels) = mnist.load_data()
+ 
+# 5. Preprocess input data
+training_data = training_data.astype('float32')
+testing_data = testing_data.astype('float32')
+training_data /= 255
+testing_data /= 255
+ 
+# 6. Preprocess class labels
+training_labels = to_categorical(training_labels, 10)
+testing_labels = to_categorical(testing_labels, 10)
+ 
+# 7. Define model architecture
+model = Sequential()
+ 
+model.add(Flatten(input_shape = (28, 28)))
+model.add(Dense(128, activation='relu'))
+model.add(Dense(10, activation='softmax'))
+ 
+# # 8. Compile model
+model.compile(loss='categorical_crossentropy',
+               optimizer='adam',
+               metrics=['accuracy'])
+ 
+# # 9. Fit model on training data
+model.fit(training_data, training_labels, 
+           batch_size=32, epochs=5, verbose=0)
+ 
+# # 10. Evaluate model on test data
+print("VALIDATE MODEL")
+(loss, accuracy) =  model.evaluate(testing_data, testing_labels)
+print('Test loss:', loss)
+print('Test accuracy:', accuracy)
+```
+
+Con 10 "epochs" el modelo se ajusto un 98%. Para determinar si no se encontraba sobre ajustado, se volvio a correr con 5 "epochs". Con este cambio, el ajuste del modelo fue de 97.93%, por lo que se considera que el modelo predice adecuadamente los pixeles.
+
 
 # Modelo de Deep Learning
+
+Sea realizo un modelo de aprendizaje de maquina utilizando redes neuronales convolucionadas. Este se realizo en python utilizando tensorflow y keras.
+```{python}
+#Author Rafael Leon
+#Example based onhttps://elitedatascience.com/keras-tutorial-deep-learning-in-python
+
+
+import numpy as np
+import tensorflow as tf
+
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.layers import Dense, Dropout, Activation, Flatten
+from tensorflow.python.keras.layers import Convolution2D, MaxPooling2D
+from tensorflow.python.keras.utils import to_categorical
+from tensorflow.python.keras.datasets import mnist
+ 
+
+(training_data, training_labels), (testing_data, testing_labels) = mnist.load_data()
+ 
+# 5. Preprocess input data
+training_data = training_data.reshape(60000, 1, 28, 28)
+#print(training_data.shape)
+testing_data = testing_data.reshape(10000, 1, 28, 28)
+#print(testing_data.shape)
+training_data = training_data.astype('float32')
+testing_data = testing_data.astype('float32')
+training_data /= 255
+testing_data /= 255
+ 
+# 6. Preprocess class labels
+training_labels = to_categorical(training_labels, 10)
+testing_labels = to_categorical(testing_labels, 10)
+ 
+# 7. Define model architecture
+model = Sequential()
+ 
+model.add(Convolution2D(32, 1, 1, activation='relu', input_shape=(1,28,28)))
+model.add(Convolution2D(32, 1, 1, activation='relu'))
+model.add(MaxPooling2D(pool_size=(1,1)))
+model.add(Dropout(0.25))
+ 
+model.add(Flatten())
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(10, activation='softmax'))
+ 
+# # 8. Compile model
+model.compile(loss='categorical_crossentropy',
+               optimizer='adam',
+               metrics=['accuracy'])
+ 
+# # 9. Fit model on training data
+model.fit(training_data, training_labels, 
+           batch_size=32, epochs=10, verbose=0)
+ 
+# # 10. Evaluate model on test data
+print("VALIDATE MODEL")
+(loss, accuracy) =  model.evaluate(testing_data, testing_labels)
+print('Test loss:', loss)
+print('Test accuracy:', accuracy)
+```
+
+## Intepretacion de la precision del modelo
+El modelo de Deep Learning Convolucional utiliza las capas del modelo de Redes Neuronales Simples y le agrega 3 capas convolucionales que reajustan el modelo antes de utilizar las redes simples. Esto incrementa la precision muy poco. Solamente un 0.007, Por lo que no hace mucha diferencia. Sin embargo es un mejor modelo ya que se le agregaron capas de Dropout, que evitan que se sobreajuste el modelo. 
 
 # Algoritmos Convencionales
 
@@ -82,7 +199,7 @@ testSet<-redimension[-corte,]
 
 Support Vector Machines, (SVM) son un conjunto de algoritmos de aprendizaje supervisado desarrollados por Vladimir Vapnik y su equipo en los laboratorios AT&T.
 
-Estos métodos están propiamente relacionados con problemas de clasificación y regresión.
+Estos metodos estan propiamente relacionados con problemas de clasificacion y regresion.
 
 Intentaremos clasificar con SVM la etiqueta de los sets de pixeles utilizando la redimension de Tsne.
 
@@ -120,7 +237,7 @@ En la la matriz de confucion se puede ver que el `0` es la clase mas certera y e
 
 ##Arbol de Decision
 
-Los arboles de decision es un modelo de prediccion. Dado un conjunto de datos se fabrican diagramas de construcciones lógicas, muy similares a los sistemas de predicción basados en reglas, que sirven para representar y categorizar una serie de condiciones que ocurren de forma sucesiva, para la resolución de un problema.
+Los arboles de decision es un modelo de prediccion. Dado un conjunto de datos se fabrican diagramas de construcciones l?gicas, muy similares a los sistemas de predicci?n basados en reglas, que sirven para representar y categorizar una serie de condiciones que ocurren de forma sucesiva, para la resoluci?n de un problema.
 
 En nuestro caso, imagenes de numeros, se espera que si cumple ciertas condiciones, las imagenes representan una etiqueta en especifico. Utilizaremos la matriz reducida por Tsne para hacer la clasificacion.
 
@@ -147,3 +264,5 @@ Con los arboles de decisiones se obtuvo una menor precision que con la SVM. Util
 # Comparacion de Algoritmos
 
 * De los algoritmos de aprendizaje de maquina convencionales, el SVM (usando un kernel radial) es mas preciso que los arboles de decision.
+* El algoritmo de Redes Neuronales simple es mas poderoso que los modelos tradicionales y no difiere mucho del modelo de redes neuronales convolucionadas
+*El mejor modelo de los tres es el modelo de Redes Neuronales Convolucionadas.
