@@ -1,0 +1,76 @@
+---
+title: "deep_learning"
+author: "Rafael León"
+date: "September 19, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(reticulate)
+use_python("c:/users/rafal/appdata/local/programs/python/python36")
+```
+
+## Deep Learning Model
+
+Sea realizó un modelo de aprendizaje de maquina utilizando redes neuronales convolucionadas. Este se realizó en python utilizando tensorflow y keras.
+```{python}
+#Author Rafael Leon
+#Example based onhttps://elitedatascience.com/keras-tutorial-deep-learning-in-python
+
+
+import numpy as np
+import tensorflow as tf
+
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.layers import Dense, Dropout, Activation, Flatten
+from tensorflow.python.keras.layers import Convolution2D, MaxPooling2D
+from tensorflow.python.keras.utils import to_categorical
+from tensorflow.python.keras.datasets import mnist
+ 
+
+(training_data, training_labels), (testing_data, testing_labels) = mnist.load_data()
+ 
+# 5. Preprocess input data
+training_data = training_data.reshape(60000, 1, 28, 28)
+#print(training_data.shape)
+testing_data = testing_data.reshape(10000, 1, 28, 28)
+#print(testing_data.shape)
+training_data = training_data.astype('float32')
+testing_data = testing_data.astype('float32')
+training_data /= 255
+testing_data /= 255
+ 
+# 6. Preprocess class labels
+training_labels = to_categorical(training_labels, 10)
+testing_labels = to_categorical(testing_labels, 10)
+ 
+# 7. Define model architecture
+model = Sequential()
+ 
+model.add(Convolution2D(32, 1, 1, activation='relu', input_shape=(1,28,28)))
+model.add(Convolution2D(32, 1, 1, activation='relu'))
+model.add(MaxPooling2D(pool_size=(1,1)))
+model.add(Dropout(0.25))
+ 
+model.add(Flatten())
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(10, activation='softmax'))
+ 
+# # 8. Compile model
+model.compile(loss='categorical_crossentropy',
+               optimizer='adam',
+               metrics=['accuracy'])
+ 
+# # 9. Fit model on training data
+model.fit(training_data, training_labels, 
+           batch_size=32, epochs=10, verbose=0)
+ 
+# # 10. Evaluate model on test data
+print("VALIDATE MODEL")
+(loss, accuracy) =  model.evaluate(testing_data, testing_labels)
+print('Test loss:', loss)
+print('Test accuracy:', accuracy)
+```
+
