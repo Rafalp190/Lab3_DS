@@ -1,0 +1,118 @@
+---
+title: "Laboratorio 3"
+author: "Oliver Mazariegos, Rafael Leon y Alejandro Vasquez"
+date: "19/09/2018"
+output: 
+  html_document:
+
+    number_sections: false
+
+    toc: true
+
+    fig_width: 8
+
+    fig_height: 6
+    
+    self_contained: true
+
+    theme: cosmo
+
+    highlight: tango
+
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+opts_knit$set(root.dir = "~/R")
+library(data.table)
+library(Rtsne)
+library(ggplot2)
+library(dplyr)
+library(e1071)
+library(caret)
+library(reticulate)
+train = as.data.table(read.csv(file = "~/R/data/all/train.csv"))
+```
+
+# Analisis exploratorio
+
+Veamos que etiquetas hay y cual es su frecuencia.
+
+```{r cuantasLabels}
+cuantasLabels = as.data.frame(table(train$label))
+ggplot(data = cuantasLabels, aes(x = Var1, y = Freq, fill = Var1)) + geom_bar(stat="identity") + labs(x = "Etiqueta", y = "Frecuencia", fill = "Frecuencia")
+```
+
+# Rtsne
+
+Debido a que hay 785 pixeles, redimencionaremos el conjunto de datos utilizando T-snea y veamos si se identifican grupos.
+
+```{r RTsne}
+set.seed(0)
+tsneaOut = Rtsne(train[,c(2:785)])
+redimension = as.data.frame(tsneaOut$Y)
+ggplot(data = redimension, aes(x = V2, y = V1, col = as.factor(train$label))) + geom_point()
+```
+
+Efectivamente se puede notar que los datos se agrupan muy bien y en diez grupos distinos, lo cual es la cantidad de distintas clases. Esto significa que podriamos hacer una prediccion utilizando los pixeles de cada una de las imagenes o con la redimension de estos.
+
+# Support Vector Machine
+
+Support Vector Machines, (SVM) son un conjunto de algoritmos de aprendizaje supervisado desarrollados por Vladimir Vapnik y su equipo en los laboratorios AT&T.
+
+Estos métodos están propiamente relacionados con problemas de clasificación y regresión.
+
+Intentaremos clasificar con SVM la etiqueta de los sets de pixeles utilizando la redimension de Tsne.
+
+
+```{r svm2}
+porcentaje<-0.7
+set.seed(098769)
+corte <- sample(nrow(redimension),nrow(redimension)*porcentaje) 
+redimension = cbind(redimension, train$label)
+colnames(redimension)[3] = "label"
+redimension$label = as.factor(redimension$label)
+trainSet<-redimension[corte,]
+testSet<-redimension[-corte,]
+
+model <- svm(label~. ,data=trainSet,kernel = "radial")
+plot(model,trainSet, fill = trainSet$label)
+prediccion <- predict(model,testSet)
+
+
+cfmSVM<-confusionMatrix(as.factor(prediccion),as.factor(testSet$label))
+
+cfmSVM
+```
+
+Gracias a la reduccion de dimensiones de Tsne se pudo utilizar support vector machine (SVM) con un kernel radial logrando un accuaracy del 96%. Se utilizo un kernel radial ya que los grupos no pueden separarse por lineas o por patrones senoidales, pero si radiales. En el grafico de clasificacion del SVM se puede ver que los datos mal clasificados son los puntos de otra etiqueta/numero que caen sobre otro grupo.  
+
+En la la matriz de confucion se puede ver que el `0` es la clase mas certera y en contraste el `9` tiene la menor certeza. Con la redimension de los pixeles, se puede ver que al menos un elemento de cada etiqueta/numero cae en la clasificacion de `8`. 
+
+#Arbol de Decision
+
+Los arboles de decision es un modelo de prediccion. Dado un conjunto de datos se fabrican diagramas de construcciones lógicas, muy similares a los sistemas de predicción basados en reglas, que sirven para representar y categorizar una serie de condiciones que ocurren de forma sucesiva, para la resolución de un problema.
+
+En nuestro caso, imagenes de numeros, se espera que si cumple ciertas condiciones, las imagenes representan una etiqueta en especifico. Utilizaremos la matriz reducida por Tsne para hacer la clasificacion.
+
+```{r}
+library(rpart)
+library(rpart.plot)
+set.seed(0987)
+dt_model<-rpart(label~.,trainSet,method = "class")
+prp(dt_model,box.palette="Pu")
+
+prediccion <- predict(dt_model, newdata = testSet)
+columnaMasAlta<-apply(prediccion, 1, function(x) colnames(prediccion)[which.max(x)])
+prediccion<-as.factor(columnaMasAlta)
+
+#Matriz de confusion
+
+cfmDT<-confusionMatrix(prediccion,testSet$label)
+cfmDT
+
+```
+
+Con los arboles de decisiones se obtuvo una menor precision que con la SVM. Utilizando los arboles de decicion se obtuvo una certeza de 88%. Siendo el numero 8 y 7 los menos certeros para predecir. Esto puede ser devido a como toma las decisiones el algoritmo. El algoritmo de primero verifica la altura del punto (V1) y luego la posicion horizontal (V2) hasta poder clasificar cada uno de los puntos. En contraste, la SVM se vasa en areas y no en fronteras, lo que aporta a la precision del modelo.
